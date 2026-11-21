@@ -73,6 +73,16 @@ Decision thresholds are tuned independently for each activity using the validati
 
 See the scripts in `github_activity_hybrid/` for implementation details and configurable arguments.
 
+MLP Prediction
+```
+python github_activity_hybrid/predict.py \
+    --features github_activity_hybrid/artifacts/predict.npz \
+    --checkpoint github_activity_hybrid/artifacts/E4_URT.pt \
+    --test-input submission/test_input.csv \
+    --output output_E4.csv \
+    --model mlp
+```
+
 GRU Prediction
 ```python
 python github_activity_hybrid/predict.py \
