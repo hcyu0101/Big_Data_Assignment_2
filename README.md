@@ -75,40 +75,40 @@ See the scripts in `github_activity_hybrid/` for implementation details and conf
 
 MLP Prediction
 ```
-python github_activity_hybrid/predict.py \
-    --features github_activity_hybrid/artifacts/predict.npz \
-    --checkpoint github_activity_hybrid/artifacts/E4_URT.pt \
-    --test-input submission/test_input.csv \
-    --output output_E4.csv \
-    --model mlp
+python github_activity_hybrid/predict.py  \
+   --features artifacts/predict.npz  \
+   --checkpoint artifacts/model_E4.pt  \
+   --test-input submission/test_input.csv  \   
+   --output submission/output_E4.csv  \
+   --model mlp
 ```
 
 GRU Prediction
 ```python
 python github_activity_hybrid/predict.py \
-    --features github_activity_hybrid/artifacts/predict.npz \
-    --checkpoint github_activity_hybrid/artifacts/E3_GRU.pt \
+    --features artifacts/predict.npz \
+    --checkpoint artifacts/model_E3.pt \
     --test-input submission/test_input.csv \
-    --output output_E3.csv \
+    --output submission/output_E3.csv \
     --model gru
 ```
 
 Copy Last Week Baseline
 ```python
 python github_activity_hybrid/predict.py \
-    --features github_activity_hybrid/artifacts/predict.npz \
+    --features artifacts/predict.npz \
     --test-input submission/test_input.csv \
-    --output output_baseline.csv \
+    --output submission/output_baseline.csv \
     --model copy_last_week
 ```
 
 Ensemble Prediction
 ```python
 python github_activity_hybrid/predict.py \
-    --features github_activity_hybrid/artifacts/predict.npz \
-    --checkpoint github_activity_hybrid/artifacts/E4_URT.pt \
+    --features artifacts/predict.npz \
+    --checkpoint artifacts/model_E4.pt \
     --test-input submission/test_input.csv \
-    --output output_E5.csv \
+    --output submission/output_E5.csv \
     --model ensemble
 ```
 
