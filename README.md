@@ -102,3 +102,10 @@ uses only rows whose official row-time is strictly before it.
 - `open_issue` excludes issue rows where `is_pull_request=True`.
 - This first version is a deliberately simple baseline. Next we should compare 7-day vs 30-day
   features, relationship aggregates, and temporal decay separately before adding a GRU or GNN.
+
+## Data Claim
+
+The data used in this assignment is sourced from [GH Archive](https://www.gharchive.org), a
+publicly available archive of GitHub events. This assignment is intended for educational
+purposes within this course.
+
