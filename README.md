@@ -1,107 +1,106 @@
-# GitHub Activity Prediction — Hybrid C baseline
+# GitHub User Activity Prediction
 
-This is the **modeling code only**. It does not replace or modify the course preprocessing.
-Run the assignment's original `scripts/preprocess.py` first; this project reads the eight
-Parquet tables it creates.
+Predicting future GitHub user activities using historical activity records, relational features, and temporal information.
 
-## 1. Expected layout
+This project is developed for **Assignment 2 of Big Data Analytics Techniques and Applications**.
+
+## Overview
+
+We formulate GitHub user activity prediction as a multi-label classification task, predicting six types of activities within the next seven days.
+
+Our framework explores three feature groups:
+
+- **User History (U):** Historical activity counts.
+- **Relational Features (R):** Repository breadth, object diversity, and activity concentration.
+- **Temporal Features (T):** Recent momentum, time decay, recency, and activity rhythm.
+
+## Models & Experiments
+
+| Experiment | Model | Features |
+|---|---|---|
+| E0 | MLP | U |
+| E1 | MLP | U + R |
+| E2 | MLP | U + T |
+| E3 | GRU Hybrid | U + R + T + Sequential Features |
+| E4 | MLP Hybrid | U + R + T |
+| E5 | Ensemble | Copy Last Week + E4 |
+
+The MLP Hybrid combines user history, relational, and temporal features. The GRU Hybrid additionally incorporates a 28-day activity sequence.
+
+## Dataset
+
+The dataset is derived from GH Archive and processed into eight Parquet tables:
+
+Users, Repositories, PullRequests, Issues, IssueComments, PRReviews, PRReviewComments, and Pushes.
+
+- Historical feature window: 30 days
+- GRU sequence window: 28 days
+- Prediction horizon: 7 days
+
+## Evaluation
+
+Models are evaluated using:
+
+$\text{Score}=\frac{\text{Macro-F1}+\text{Micro-F1}}{2}$
+
+Decision thresholds are tuned independently for each activity using the validation set.
+
+## Repository Structure
 
 ```text
-assignment2/
-  scripts/preprocess.py
-  scripts/cohort.txt
-  scripts/evaluate.py
-  submission/test_input.csv
-  data/db/
-    Users.parquet
-    Repositories.parquet
-    PullRequests.parquet
-    Issues.parquet
-    IssueComments.parquet
-    PRReviews.parquet
-    PRReviewComments.parquet
-    Pushes.parquet
-  github_activity_hybrid/
-    prepare.py
-    train.py
-    predict.py
-    src/
-      common.py
-      features.py
+├── scripts/
+│   ├── preprocess.py
+│   ├── evaluate.py
+│   └── cohort.txt
+├── submission/
+├── data/
+│   └── db/
+├── github_activity_hybrid/
+│   ├── prepare.py
+│   ├── train.py
+│   ├── predict.py
+│   ├── src/
+│   └── artifacts/
+└── README.md
 ```
 
-## 2. Install
+## Usage
 
-```bash
-pip install pandas pyarrow numpy scikit-learn torch
-```
+1. Preprocess the raw GH Archive data into Parquet tables.
+2. Prepare training, validation, and prediction features.
+3. Train the desired model using the selected feature groups.
+4. Generate predictions using the trained checkpoint.
 
-## 3. Prepare chronological training and validation data
+See the scripts in `github_activity_hybrid/` for implementation details and configurable arguments.
 
-From the assignment root:
-
-```bash
-python github_activity_hybrid/prepare.py \
-  --db-dir data/db \
-  --cohort-file scripts/cohort.txt \
-  --data-start 2026-10-01 \
-  --out-dir github_activity_hybrid/artifacts
-```
-
-Default rolling training cutoffs are Oct 8, 15, 22 and 29, 2026. Each sample
-uses the next seven days as its target. Validation uses Nov 10–17, 2026. The final training target ends on Nov 5, leaving a five-day gap before validation to prevent target-window overlap.
-
-All timestamps are UTC, as specified by the assignment. The validation window must be fully
-covered by the downloaded data. Do not use any event after a snapshot cutoff as a feature.
-
-## 4. Train
-
-```bash
-python github_activity_hybrid/train.py \
-  --artifacts github_activity_hybrid/artifacts \
-  --epochs 80
-```
-
-The baseline is a multi-label MLP with weighted binary cross entropy. Per-task thresholds are
-tuned on the chronological validation snapshot; these thresholds are for the first experiment
-only and should be treated cautiously because validation contains one target week.
-
-## 5. Create a feature snapshot and predict
-
-Choose a UTC cutoff that is no later than the latest complete data available. For example:
-
-```bash
-python github_activity_hybrid/prepare.py \
-  --db-dir data/db \
-  --cohort-file scripts/cohort.txt \
-  --data-start 2026-10-01 \
-  --out-dir github_activity_hybrid/artifacts \
-  --predict-cutoff 2026-11-17T00:00:00Z
-
+GRU Prediction
+```python
 python github_activity_hybrid/predict.py \
-  --features github_activity_hybrid/artifacts/predict.npz \
-  --checkpoint github_activity_hybrid/artifacts/hybrid_mlp.pt \
-  --test-input submission/test_input.csv \
-  --output output_hybrid.csv
+    --features github_activity_hybrid/artifacts/predict.npz \
+    --checkpoint github_activity_hybrid/artifacts/E3_GRU.pt \
+    --test-input submission/test_input.csv \
+    --output output_E3.csv \
+    --model gru
 ```
 
-The prediction cutoff above is only an example. It is a UTC timestamp, and the feature builder
-uses only rows whose official row-time is strictly before it.
+Copy Last Week Baseline
+```python
+python github_activity_hybrid/predict.py \
+    --features github_activity_hybrid/artifacts/predict.npz \
+    --test-input submission/test_input.csv \
+    --output output_baseline.csv \
+    --model copy_last_week
+```
 
-## Important implementation notes
-
-- `Users.user_id` and all foreign keys are period-dependent row numbers. The code maps them
-  through `Users.github_user_id`, which is stable across processing periods and matches
-  `test_input.csv` / `cohort.txt`.
-- The cohort list is read from the course-provided `scripts/cohort.txt`, so users with no
-  observed activity in the downloaded period still receive zero-valued features and labels.
-- Historical features use the assignment's row-time columns: `first_seen_at` for PRs, issues
-  and reviews; `created_at` for comments and pushes.
-- Target labels use the corresponding activity timestamps: `created_at` for PRs/issues/comments,
-  `submitted_at` for reviews, and `created_at` for pushes.
-- `open_issue` excludes issue rows where `is_pull_request=True`.
-- This first version is a deliberately simple baseline. Next we should compare 7-day vs 30-day
-  features, relationship aggregates, and temporal decay separately before adding a GRU or GNN.
+Ensemble Prediction
+```python
+python github_activity_hybrid/predict.py \
+    --features github_activity_hybrid/artifacts/predict.npz \
+    --checkpoint github_activity_hybrid/artifacts/E4_URT.pt \
+    --test-input submission/test_input.csv \
+    --output output_E5.csv \
+    --model ensemble
+```
 
 ## Data Claim
 
